@@ -44,7 +44,7 @@ module NSInfo
             ns = data[name]
             ns.keys.each do |inode|
                 inode_data = ns[inode]
-                puts("inode: #{inode}")
+                puts("#{name}: inode: #{inode}")
                     printf("\t%10s\t%10s\t%s\n", "pid", "ppid", "comm")
                 inode_data.each do |d|
                     printf("\t%10s\t%10s\t%s\n", d["pid"], d["ppid"], d["comm"])

@@ -30,7 +30,18 @@ sudo ./nsinfo.rb
 nsinfo shows pid, ppid, and comm by inode.
 
 ```
-inode: 4026532860
+             14828               2      kworker/6
+             15028               2      kworker/u16
+             15192               2      kworker/5
+             15397               2      kworker/2
+             15527               2      kworker/3
+             16570            9001      sudo
+             16571           16570      ruby-mri
+             18810               2      kworker/0
+             19747               2      kworker/4
+             23515               2      kworker/2
+             27485               1      gvfsd-http
+user: inode: 4026532860
                pid            ppid      comm
               2245            2198      chrome
               2265            2245      chrome
@@ -41,15 +52,12 @@ inode: 4026532860
               2590            2265      chrome
               2601            2265      chrome
               3032            2265      chrome
-              3114            2265      chrome
-              6847            2265      chrome
-              7437            2265      chrome
              10065            2265      chrome
              20524            2265      chrome
-inode: 4026532859
+user: inode: 4026532859
                pid            ppid      comm
               2255            2245      nacl_helper
-inode: 4026531840
+mnt: inode: 4026531840
                pid            ppid      comm
                  1               0      systemd
                  2               0      kthreadd
@@ -57,6 +65,7 @@ inode: 4026531840
                  5               2      kworker/0
                  7               2      rcu_sched
                  8               2      rcu_bh
- 
+                 9               2      rcuos/0
+  
 ```
 
