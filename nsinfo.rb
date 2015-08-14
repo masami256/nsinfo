@@ -13,6 +13,9 @@
 
 require 'optparse'
 
+# Program version
+Version = "0.1"
+
 module NSInfo
     def is_root?
         Process.uid == 0
@@ -152,8 +155,8 @@ end
 include NSInfo
 require 'pp'
 
-def usage
-    puts("usage: ${0} [option]")
+def usage(prog)
+    puts("usage: #{prog} [option]")
     puts("\t-a --all: show all namespace information")
     puts("\t-p PID --pid=PID show pid PID's namespace information")
     exit
@@ -199,6 +202,8 @@ if __FILE__ == $0
         show_all_processes_namespace_info
     elsif options.include?('pid')
         show_namespace_by_pid(options['pid'])
+    else
+        usage($0)
     end
 end
 
