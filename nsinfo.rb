@@ -57,6 +57,20 @@ module NSInfo
         end
     end
 
+    def show_namespace_info_by_pid(pid)
+        process = {}
+
+        proc_path = "/proc/#{pid}"
+
+        process['ns'] = read_process_directory(proc_path)
+        process['process'] = read_process_status(proc_path)
+
+        puts("Process #{process['process']['pid']} : #{process['process']['comm']}")
+        process['ns'].keys.each do |key|
+            printf("\t%5s\t%10s\n", key, process['ns'][key])
+        end
+    end
+
     private
     def workthrough_proc_dir
         processes = {}
@@ -192,7 +206,7 @@ def show_all_processes_namespace_info
 end
 
 def show_namespace_by_pid(pid)
-    puts("${pid}")
+    NSInfo.show_namespace_info_by_pid(pid)  
 end
 
 if __FILE__ == $0
