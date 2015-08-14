@@ -172,11 +172,16 @@ def parse_options
     end
 
     opt.on('-p PID', '--pid') do |v|
-        p v
         options['pid'] = v
     end
 
     opt.parse(ARGV)
+
+    # set defaul option, if command line parameter(s) is not set
+    if options.size == 0
+        options["all"] = true
+    end
+
     return options
 end
 
