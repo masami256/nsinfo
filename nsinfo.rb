@@ -11,6 +11,7 @@
 # this stuff is worth it, you can buy me a beer in return.   @masami256
 #  ----------------------------------------------------------------------------
 
+require 'optparse'
 
 module NSInfo
     def is_root?
@@ -151,15 +152,53 @@ end
 include NSInfo
 require 'pp'
 
+def usage
+    puts("usage: ${0} [option]")
+    puts("\t-a --all: show all namespace information")
+    puts("\t-p PID --pid=PID show pid PID's namespace information")
+    exit
+end
+
+def parse_options
+    opt = OptionParser.new
+
+    options = {}
+
+    opt.on('-a', '--all') do |v|
+        options['all'] = true
+    end
+
+    opt.on('-p PID', '--pid') do |v|
+        p v
+        options['pid'] = v
+    end
+
+    opt.parse(ARGV)
+    return options
+end
+
+def show_all_processes_namespace_info
+    processes = NSInfo.read_process_directories
+    data_by_namespace = NSInfo.make_nsinfo_data_by_namespace(processes)
+    NSInfo.show_data_by_namespace(data_by_namespace)
+end
+
+def show_namespace_by_pid(pid)
+    puts("${pid}")
+end
+
 if __FILE__ == $0
+
     if !NSInfo.is_root?
         puts("You need root privilage to run this program")
         Process.exit(-1)
     end
 
-    processes = NSInfo.read_process_directories
-    data_by_namespace = NSInfo.make_nsinfo_data_by_namespace(processes)
-
-    NSInfo.show_data_by_namespace(data_by_namespace)
+    options = parse_options
+    if options.include?('all')
+        show_all_processes_namespace_info
+    elsif options.include?('pid')
+        show_namespace_by_pid(options['pid'])
+    end
 end
 
