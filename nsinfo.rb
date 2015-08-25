@@ -71,6 +71,11 @@ module NSInfo
         end
     end
 
+    def count_number_of_namespaces
+        namespaces = count_number_of_all_namespaces
+        show_number_of_namespaces(namespaces)
+    end
+
     private
     def workthrough_proc_dir
         processes = {}
@@ -164,6 +169,45 @@ module NSInfo
             "ppid" => processes[pid]["process"]["ppid"]
         }
     end
+
+    def count_number_of_all_namespaces
+        processes = read_process_directories
+
+        namespaces = {
+            'net' => {},
+            'uts' => {},
+            'ipc' => {},
+            'pid' => {},
+            'user' => {},
+            'mnt' => {} 
+        }
+
+        processes.each do |process|
+            tmp = process[1]['ns']
+            tmp.keys.each do |key|
+                if namespaces[key][tmp[key]].nil?
+                    namespaces[key][tmp[key]] = 1
+                else
+                    namespaces[key][tmp[key]] += 1
+                end
+            end
+
+        end
+        return namespaces
+    end
+
+    def show_number_of_namespaces(namespaces)
+        namespaces.keys.each do |ns|
+            namespace = namespaces[ns]
+            total = 0
+            puts ("#{ns}: namespace")
+            namespace.keys.each do |inode|
+                puts("\tinode:#{inode} : #{namespace[inode]}")
+                total += namespace[inode]
+            end
+            puts("\tTotal : #{total}")
+        end
+    end
 end
 
 include NSInfo
@@ -189,6 +233,10 @@ def parse_options
         options['pid'] = v
     end
 
+    opt.on('-c', '--count') do |v|
+        options['count'] = true
+    end
+
     opt.parse(ARGV)
 
     # set defaul option, if command line parameter(s) is not set
@@ -209,6 +257,10 @@ def show_namespace_by_pid(pid)
     NSInfo.show_namespace_info_by_pid(pid)  
 end
 
+def count_namespaces
+    NSInfo.count_number_of_namespaces
+end
+
 if __FILE__ == $0
 
     if !NSInfo.is_root?
@@ -221,6 +273,8 @@ if __FILE__ == $0
         show_all_processes_namespace_info
     elsif options.include?('pid')
         show_namespace_by_pid(options['pid'])
+    elsif options.include?('count')
+        count_namespaces
     else
         usage($0)
     end
