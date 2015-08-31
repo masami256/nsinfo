@@ -21,191 +21,193 @@ module NSInfo
         Process.uid == 0
     end
 
-    def read_process_directories
-        workthrough_proc_dir
-    end
-
-    def make_nsinfo_data_by_namespace(processes)
-        threads = []
-        data = {}
-
-        namespace_names(processes).each do |name|
-            data[name] = {}
-            threads << Thread.new do
-                make_data_by_namespace!(name, processes, data[name])
-            end
-        end 
-
-        threads.each do |thread|
-            thread.join
+    class NamespaceInfo
+        def read_process_directories
+            workthrough_proc_dir
         end
+    
+        def make_nsinfo_data_by_namespace(processes)
+            threads = []
+            data = {}
 
-        return data
-    end
+            namespace_names(processes).each do |name|
+                data[name] = {}
+                threads << Thread.new do
+                    make_data_by_namespace!(name, processes, data[name])
+                end
+            end 
 
-    def show_data_by_namespace(data)
-        data.keys.each do |name|
-            ns = data[name]
-            ns.keys.each do |inode|
-                inode_data = ns[inode]
-                puts("#{name}: inode: #{inode}")
+            threads.each do |thread|
+                thread.join
+            end
+
+            return data
+        end
+    
+        def show_data_by_namespace(data)
+            data.keys.each do |name|
+                ns = data[name]
+                ns.keys.each do |inode|
+                    inode_data = ns[inode]
+                    puts("#{name}: inode: #{inode}")
                     printf("\t%10s\t%10s\t%s\n", "pid", "ppid", "comm")
-                inode_data.each do |d|
-                    printf("\t%10s\t%10s\t%s\n", d["pid"], d["ppid"], d["comm"])
-                end
-            end
-        end
-    end
-
-    def show_namespace_info_by_pid(pid)
-        process = {}
-
-        proc_path = "/proc/#{pid}"
-
-        process['ns'] = read_process_directory(proc_path)
-        process['process'] = read_process_status(proc_path)
-
-        puts("Process #{process['process']['pid']} : #{process['process']['comm']}")
-        process['ns'].keys.each do |key|
-            printf("\t%5s\t%10s\n", key, process['ns'][key])
-        end
-    end
-
-    def count_number_of_namespaces
-        namespaces = count_number_of_all_namespaces
-        show_number_of_namespaces(namespaces)
-    end
-
-    private
-    def workthrough_proc_dir
-        processes = {}
-
-        Dir::foreach('/proc') do |item|
-            abs_path = '/proc/' + item
-            if FileTest.directory?('/proc/' + item)
-                if is_process_dir?(item)
-                    processes[item] ||= {}
-
-                    processes[item]['ns'] = read_process_directory(abs_path)
-                    processes[item]['process'] = read_process_status(abs_path)
-                end
-            end
-        end
-        return processes
-    end
-
-    def read_process_directory(path)
-        ret = {}
-
-        Dir::foreach(path + '/ns') do |ns|
-            abs_path = path + '/ns/' + ns
-            if FileTest.file?(abs_path)
-                name, inode = split_name_and_inode(abs_path)
-                ret[name] = inode
-            end
-        end
-        return ret
-    end
-
-    def read_process_status(path)
-        ret = {}
-        open(path + '/status') do |file|
-            while line = file.gets
-                if line[0..3] == "Name"
-                    ret["comm"] = line.split(':')[1].strip
-                elsif line[0..2] == "Pid"
-                    ret["pid"] = line.split(':')[1].strip
-                elsif line[0..3] == "PPid"
-                    ret["ppid"] = line.split(':')[1].strip
+                    inode_data.each do |d|
+                        printf("\t%10s\t%10s\t%s\n", d["pid"], d["ppid"], d["comm"])
+                    end
                 end
             end
         end
 
-        return ret
-    end
+        def show_namespace_info_by_pid(pid)
+            process = {}
 
-    def split_name_and_inode(path)
-        tmp = File.readlink(path).split(':')
-        name = tmp[0].strip
-        inode = tmp[1][1 .. tmp[1].length - 2].strip
-        return name, inode
-    end
+            proc_path = "/proc/#{pid}"
 
-    def is_process_dir?(name)
-        (name =~ /^\d+$/) == 0
-    end
+            process['ns'] = read_process_directory(proc_path)
+            process['process'] = read_process_status(proc_path)
 
-    def namespace_names(processes)
-        processes["1"]["ns"].keys
-    end
-
-    # Make data by following format
-    #
-    # {
-    #   inode => [
-    #     {pid => pid, comm => comm, ppid => ppid},
-    #     {pid => pid, comm => comm, ppid => ppid}
-    #   ],
-    #   inode = [
-    #     {pid => pid, comm => comm, ppid => ppid},
-    #     {pid => pid, comm => comm, ppid => ppid}
-    #   ]
-    # }
-    def make_data_by_namespace!(name, processes, result_buf)
-        processes.keys.each do |pid|
-            inode = processes[pid]["ns"][name]
-            unless result_buf.has_key?(inode)
-                result_buf[inode] = [ read_process_data_by_pid(pid, processes) ]
-            else
-                result_buf[inode] = result_buf[inode] << read_process_data_by_pid(pid, processes)
+            puts("Process #{process['process']['pid']} : #{process['process']['comm']}")
+            process['ns'].keys.each do |key|
+                printf("\t%5s\t%10s\n", key, process['ns'][key])
             end
         end
-    end
+    
+        def count_number_of_namespaces
+            namespaces = count_number_of_all_namespaces
+            show_number_of_namespaces(namespaces)
+        end
+    
+        private
+        def workthrough_proc_dir
+            processes = {}
 
-    def read_process_data_by_pid(pid, processes)
-        {
-            "pid" => pid,
-            "comm" => processes[pid]["process"]["comm"],
-            "ppid" => processes[pid]["process"]["ppid"]
-        }
-    end
+            Dir::foreach('/proc') do |item|
+                abs_path = '/proc/' + item
+                if FileTest.directory?('/proc/' + item)
+                    if is_process_dir?(item)
+                        processes[item] ||= {}
 
-    def count_number_of_all_namespaces
-        processes = read_process_directories
+                        processes[item]['ns'] = read_process_directory(abs_path)
+                        processes[item]['process'] = read_process_status(abs_path)
+                    end
+                end
+            end
+            return processes
+        end
+    
+        def read_process_directory(path)
+            ret = {}
 
-        namespaces = {
-            'net' => {},
-            'uts' => {},
-            'ipc' => {},
-            'pid' => {},
-            'user' => {},
-            'mnt' => {} 
-        }
+            Dir::foreach(path + '/ns') do |ns|
+                abs_path = path + '/ns/' + ns
+                if FileTest.file?(abs_path)
+                    name, inode = split_name_and_inode(abs_path)
+                    ret[name] = inode
+                end
+            end
+            return ret
+        end
+    
+        def read_process_status(path)
+            ret = {}
+            open(path + '/status') do |file|
+                while line = file.gets
+                    if line[0..3] == "Name"
+                        ret["comm"] = line.split(':')[1].strip
+                    elsif line[0..2] == "Pid"
+                        ret["pid"] = line.split(':')[1].strip
+                    elsif line[0..3] == "PPid"
+                        ret["ppid"] = line.split(':')[1].strip
+                    end
+                end
+            end
 
-        processes.each do |process|
-            tmp = process[1]['ns']
-            tmp.keys.each do |key|
-                if namespaces[key][tmp[key]].nil?
-                    namespaces[key][tmp[key]] = 1
+            return ret
+        end
+    
+        def split_name_and_inode(path)
+            tmp = File.readlink(path).split(':')
+            name = tmp[0].strip
+            inode = tmp[1][1 .. tmp[1].length - 2].strip
+            return name, inode
+        end
+    
+        def is_process_dir?(name)
+            (name =~ /^\d+$/) == 0
+        end
+
+        def namespace_names(processes)
+            processes["1"]["ns"].keys
+        end
+
+        # Make data by following format
+        #
+        # {
+        #   inode => [
+        #     {pid => pid, comm => comm, ppid => ppid},
+        #     {pid => pid, comm => comm, ppid => ppid}
+        #   ],
+        #   inode = [
+        #     {pid => pid, comm => comm, ppid => ppid},
+        #     {pid => pid, comm => comm, ppid => ppid}
+        #   ]
+        # }
+        def make_data_by_namespace!(name, processes, result_buf)
+            processes.keys.each do |pid|
+                inode = processes[pid]["ns"][name]
+                unless result_buf.has_key?(inode)
+                    result_buf[inode] = [ read_process_data_by_pid(pid, processes) ]
                 else
-                    namespaces[key][tmp[key]] += 1
+                    result_buf[inode] = result_buf[inode] << read_process_data_by_pid(pid, processes)
                 end
             end
-
         end
-        return namespaces
-    end
+    
+        def read_process_data_by_pid(pid, processes)
+            {
+                "pid" => pid,
+                "comm" => processes[pid]["process"]["comm"],
+                "ppid" => processes[pid]["process"]["ppid"]
+            }
+        end
+    
+        def count_number_of_all_namespaces
+            processes = read_process_directories
 
-    def show_number_of_namespaces(namespaces)
-        namespaces.keys.each do |ns|
-            namespace = namespaces[ns]
-            total = 0
-            puts ("#{ns}: namespace")
-            namespace.keys.each do |inode|
-                puts("\tinode:#{inode} : #{namespace[inode]}")
-                total += namespace[inode]
+            namespaces = {
+                'net' => {},
+                'uts' => {},
+                'ipc' => {},
+                'pid' => {},
+                'user' => {},
+                'mnt' => {} 
+            }
+
+            processes.each do |process|
+                tmp = process[1]['ns']
+                tmp.keys.each do |key|
+                    if namespaces[key][tmp[key]].nil?
+                        namespaces[key][tmp[key]] = 1
+                    else
+                        namespaces[key][tmp[key]] += 1
+                    end
+                end
+
             end
-            puts("\tTotal : #{total}")
+            return namespaces
+        end
+    
+        def show_number_of_namespaces(namespaces)
+            namespaces.keys.each do |ns|
+                namespace = namespaces[ns]
+                total = 0
+                puts ("#{ns}: namespace")
+                namespace.keys.each do |inode|
+                    puts("\tinode:#{inode} : #{namespace[inode]}")
+                    total += namespace[inode]
+                end
+                puts("\tTotal : #{total}")
+            end
         end
     end
 end
@@ -248,17 +250,21 @@ def parse_options
 end
 
 def show_all_processes_namespace_info
-    processes = NSInfo.read_process_directories
-    data_by_namespace = NSInfo.make_nsinfo_data_by_namespace(processes)
-    NSInfo.show_data_by_namespace(data_by_namespace)
+    ni = NSInfo::NamespaceInfo.new
+
+    processes = ni.read_process_directories
+    data_by_namespace = ni.make_nsinfo_data_by_namespace(processes)
+    ni.show_data_by_namespace(data_by_namespace)
 end
 
 def show_namespace_by_pid(pid)
-    NSInfo.show_namespace_info_by_pid(pid)  
+    ni = NSInfo::NamespaceInfo.new
+    ni.show_namespace_info_by_pid(pid)  
 end
 
 def count_namespaces
-    NSInfo.count_number_of_namespaces
+    ni = NSInfo::NamespaceInfo.new
+    ni.count_number_of_namespaces
 end
 
 if __FILE__ == $0
