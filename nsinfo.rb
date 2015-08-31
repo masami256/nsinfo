@@ -22,42 +22,13 @@ module NSInfo
     end
 
     class NamespaceInfo
-        def read_process_directories
-            workthrough_proc_dir
+ 
+        def show_all_processes_by_namespaces
+            processes = read_process_directories
+            data_by_namespace = make_nsinfo_data_by_namespace(processes)
+            show_data_by_namespace(data_by_namespace)
         end
     
-        def make_nsinfo_data_by_namespace(processes)
-            threads = []
-            data = {}
-
-            namespace_names(processes).each do |name|
-                data[name] = {}
-                threads << Thread.new do
-                    make_data_by_namespace!(name, processes, data[name])
-                end
-            end 
-
-            threads.each do |thread|
-                thread.join
-            end
-
-            return data
-        end
-    
-        def show_data_by_namespace(data)
-            data.keys.each do |name|
-                ns = data[name]
-                ns.keys.each do |inode|
-                    inode_data = ns[inode]
-                    puts("#{name}: inode: #{inode}")
-                    printf("\t%10s\t%10s\t%s\n", "pid", "ppid", "comm")
-                    inode_data.each do |d|
-                        printf("\t%10s\t%10s\t%s\n", d["pid"], d["ppid"], d["comm"])
-                    end
-                end
-            end
-        end
-
         def show_namespace_info_by_pid(pid)
             process = {}
 
@@ -78,6 +49,42 @@ module NSInfo
         end
     
         private
+        def read_process_directories
+            workthrough_proc_dir
+        end
+
+        def make_nsinfo_data_by_namespace(processes)
+            threads = []
+            data = {}
+
+            namespace_names(processes).each do |name|
+                data[name] = {}
+                threads << Thread.new do
+                    make_data_by_namespace!(name, processes, data[name])
+                end
+            end 
+
+            threads.each do |thread|
+                thread.join
+            end
+
+            return data
+        end
+
+        def show_data_by_namespace(data)
+            data.keys.each do |name|
+                ns = data[name]
+                ns.keys.each do |inode|
+                    inode_data = ns[inode]
+                    puts("#{name}: inode: #{inode}")
+                    printf("\t%10s\t%10s\t%s\n", "pid", "ppid", "comm")
+                    inode_data.each do |d|
+                        printf("\t%10s\t%10s\t%s\n", d["pid"], d["ppid"], d["comm"])
+                    end
+                end
+            end
+        end
+
         def workthrough_proc_dir
             processes = {}
 
@@ -252,9 +259,8 @@ end
 def show_all_processes_namespace_info
     ni = NSInfo::NamespaceInfo.new
 
-    processes = ni.read_process_directories
-    data_by_namespace = ni.make_nsinfo_data_by_namespace(processes)
-    ni.show_data_by_namespace(data_by_namespace)
+    ni.show_all_processes_by_namespaces
+
 end
 
 def show_namespace_by_pid(pid)
