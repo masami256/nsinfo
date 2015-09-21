@@ -19,6 +19,19 @@ lrwxrwxrwx. 1 masami masami 0 Jul 29 23:52 uts -> uts:[4026531838]
 ```
 So, nsinfo collects data by inode to show who uses the inode.
 
+## options
+
+* -a
+  show all namespaces(inode)
+  default option
+
+* -p
+  show specific pid's namespaces 
+
+* -c
+  count number of inodes in each namespacs.\
+
+
 ## how to run
 
 ```
@@ -69,3 +82,54 @@ mnt: inode: 4026531840
   
 ```
 
+count option
+
+```
+net: namespace
+        inode:4026531969 : 266
+        inode:4026532328 : 1
+        inode:4026532511 : 13
+        inode:4026532571 : 1
+        Total: 4
+uts: namespace
+        inode:4026531838 : 281
+        Total: 1
+ipc: namespace
+        inode:4026531839 : 281
+        Total: 1
+pid: namespace
+        inode:4026531836 : 267
+        inode:4026532509 : 2
+        inode:4026532390 : 1
+>>> cut <<<
+        inode:4026532386 : 1
+        inode:4026532393 : 1
+        Total: 14
+user: namespace
+        inode:4026531837 : 267
+        inode:4026532628 : 13
+        inode:4026532627 : 1
+        Total: 3
+mnt: namespace
+        inode:4026531840 : 276
+        inode:4026531857 : 1
+        inode:4026532201 : 1
+        inode:4026532318 : 1
+        inode:4026532444 : 1
+        inode:4026532504 : 1
+        Total: 6
+Total processes: 1686
+```
+
+pid option
+
+```
+masami@saga:~/codes/nsinfo (master)$ sudo ./nsinfo.rb -p 11862
+Process 11862 : ssh
+          net   4026531969
+          uts   4026531838
+          ipc   4026531839
+          pid   4026531836
+         user   4026531837
+          mnt   4026531840
+```
