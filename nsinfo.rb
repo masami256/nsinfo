@@ -205,16 +205,19 @@ module NSInfo
         end
     
         def show_number_of_namespaces(namespaces)
+            total = 0
             namespaces.keys.each do |ns|
+                ns_total = 0
                 namespace = namespaces[ns]
-                total = 0
                 puts ("#{ns}: namespace")
                 namespace.keys.each do |inode|
                     puts("\tinode:#{inode} : #{namespace[inode]}")
                     total += namespace[inode]
+                    ns_total += 1
                 end
-                puts("\tTotal : #{total}")
+                puts("\tTotal: #{ns_total}")
             end
+            puts("Total processes: #{total}")
         end
     end
 end
