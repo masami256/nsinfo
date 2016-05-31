@@ -39,14 +39,15 @@ func main() {
         os.Exit(0)
     }
 
-    if nsinfo.IsRoot() {
-        println("your root")
-    } else {
-        println("yourn't root")
+    if !nsinfo.IsRoot() {
+        panic("yourn't root")
     }
 
-    println("mode is ", t)
-    if t == ShowPid {
-        println("use pid ", v)
+    if t == ShowAll {
+        nsinfo.ShowAllNamespaces()
+    } else if t == ShowPid {
+        println("pid ", v)
+    } else if t == ShowCount {
+        println("show count")
     }
 }
