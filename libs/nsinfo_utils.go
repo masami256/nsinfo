@@ -7,6 +7,7 @@ import (
     "regexp"
     "fmt"
     "strings"
+    "bufio"
 )
 
 const proc_dir = "/proc"
@@ -15,8 +16,35 @@ type NamespaceInfo struct {
     ns map[string]string
 }
 
+type ProcInfo struct {
+    ppid string
+    comm string
+}
+
 type ProcessMap struct {
-    process map[string]NamespaceInfo
+    nsInfo map[string]NamespaceInfo
+    procInfo map[string]ProcInfo
+}
+
+func readPpid(processes *ProcessMap, pid string) {
+    status_file := filepath.Join(proc_dir, pid, "status")
+
+    fp, err := os.Open(status_file)
+    if err != nil {
+        panic("failed to read status file")
+    }
+
+    defer fp.Close()
+
+    scanner := bufio.NewScanner(fp)
+    for scanner.Scan() {
+        line := scanner.Text()
+        if line[0:5] == "PPid:" {
+            arr := strings.Split(line, ":")
+            fmt.Printf("%s\n", strings.TrimSpace(arr[1]))
+            break
+        }
+    }
 }
 
 func lookupNamespaceDirectory(processes *ProcessMap, pid string) {
@@ -39,12 +67,13 @@ func lookupNamespaceDirectory(processes *ProcessMap, pid string) {
         }
         nsinfo.ns[ns.Name()] = strings.Split(strings.Split(value, "[")[1], "]")[0]
     }
-    processes.process[pid] = nsinfo
+    processes.nsInfo[pid] = nsinfo
 }
 
 func walkProcDirectory() {
     processes := ProcessMap{}
-    processes.process = map[string]NamespaceInfo{}
+    processes.nsInfo = map[string]NamespaceInfo{}
+    processes.procInfo = map[string]ProcInfo{}
 
     files, err := ioutil.ReadDir(proc_dir)
     if err != nil {
@@ -54,10 +83,11 @@ func walkProcDirectory() {
     for _, f := range files {
         if regexp.MustCompile("^[1-9]").Match([]byte(f.Name())) {
             lookupNamespaceDirectory(&processes, f.Name())
+            readPpid(&processes, f.Name())
         }
     }
 
-    for pid, nsinfo := range processes.process {
+    for pid, nsinfo := range processes.nsInfo {
         fmt.Printf("pid: %s\n", pid)
         for ns, nsval := range nsinfo.ns {
             fmt.Printf("%s: %s, ", ns, nsval)
